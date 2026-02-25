@@ -1,9 +1,9 @@
 const std = @import("std");
-const ma = @import("miniaudio.zig");
+const ma = @cImport(@cInclude("miniaudio.h"));
 
 fn ma_error_check(result: ma.ma_result) !void {
     if (result != ma.MA_SUCCESS) {
-        std.debug.print("Error: {}\n", .{result});
+        std.log.err("{}", .{result});
         return error.MiniAudioError;
     }
 }
@@ -14,10 +14,9 @@ export fn data_callback(
     pInput: ?*const anyopaque,
     frameCount: ma.ma_uint32,
 ) callconv(.c) void {
-    const d: *ma.ma_device = @ptrCast(device);
-    const pEncoder: *ma.ma_encoder = @ptrCast(@alignCast(d.pUserData));
-    _ = ma.ma_encoder_write_pcm_frames(pEncoder, pInput, frameCount, null);
     _ = pOutput;
+    const pEncoder: *ma.ma_encoder = @ptrCast(@alignCast(device.*.pUserData));
+    ma_error_check(ma.ma_encoder_write_pcm_frames(pEncoder, pInput, frameCount, null)) catch @panic("ma_encoder_write_pcm_frames");
 }
 
 pub fn main() !void {
@@ -47,7 +46,7 @@ pub fn main() !void {
     }
 
     std.debug.print("Insert index of capture device: ", .{});
-    const index_str_input = try stdin_reader.interface.takeDelimiterExclusive('\n');
+    const index_str_input = try stdin_reader.interface.takeDelimiterInclusive('\n');
     const index_str = std.mem.trim(u8, index_str_input, &std.ascii.whitespace);
     const index = try std.fmt.parseInt(usize, index_str, 10);
     std.debug.print("Selected capture device: {s}\n", .{pCaptureDeviceInfos[index].name});
@@ -62,6 +61,7 @@ pub fn main() !void {
     device_config.capture.pDeviceID = &pCaptureDeviceInfos[index].id;
     device_config.capture.format = encoder.config.format;
     device_config.capture.channels = encoder.config.channels;
+    device_config.sampleRate = encoder.config.sampleRate;
     device_config.dataCallback = data_callback;
     device_config.pUserData = &encoder;
 
