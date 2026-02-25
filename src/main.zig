@@ -19,10 +19,11 @@ export fn data_callback(
     ma_error_check(ma.ma_encoder_write_pcm_frames(pEncoder, pInput, frameCount, null)) catch @panic("ma_encoder_write_pcm_frames");
 }
 
-pub fn main() !void {
-    const stdin = std.fs.File.stdin();
+pub fn main(init: std.process.Init) !void {
+    const io = init.io;
+    const stdin = std.Io.File.stdin();
     var stdin_buffer: [1024]u8 = undefined;
-    var stdin_reader = stdin.reader(&stdin_buffer);
+    var stdin_reader = stdin.reader(io, &stdin_buffer);
 
     var context: ma.ma_context = undefined;
     try ma_error_check(ma.ma_context_init(null, 0, null, &context));

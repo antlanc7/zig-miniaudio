@@ -2,7 +2,7 @@
     .name = .zig_miniaudio,
     .version = "0.0.0",
     .fingerprint = 0x437121066afe1d60,
-    .minimum_zig_version = "0.15.2",
+    .minimum_zig_version = "0.16.0-dev.2653+784e89fd4",
     .dependencies = .{
         .miniaudio = .{
             .url = "https://github.com/mackron/miniaudio/archive/refs/tags/0.11.24.tar.gz",
