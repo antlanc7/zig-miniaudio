@@ -8,15 +8,17 @@ fn ma_error_check(result: ma.ma_result) !void {
     }
 }
 
-export fn data_callback(
-    device: [*c]ma.ma_device,
+export fn capture_callback(
+    pDevice: [*c]ma.ma_device,
     pOutput: ?*anyopaque,
     pInput: ?*const anyopaque,
     frameCount: ma.ma_uint32,
 ) callconv(.c) void {
     _ = pOutput;
-    const pEncoder: *ma.ma_encoder = @ptrCast(@alignCast(device.*.pUserData));
-    ma_error_check(ma.ma_encoder_write_pcm_frames(pEncoder, pInput, frameCount, null)) catch @panic("ma_encoder_write_pcm_frames");
+    const count = frameCount * pDevice.*.capture.channels;
+    const input_m: [*]const f32 = @ptrCast(@alignCast(pInput));
+    const input = input_m[0..count];
+    std.log.debug("pitch: {}", .{computePitch(input)});
 }
 
 pub fn main(init: std.process.Init) !void {
@@ -71,19 +73,13 @@ fn capture(stdin_reader: *std.Io.Reader) !void {
     const index = try std.fmt.parseInt(usize, index_str, 10);
     std.debug.print("Selected capture device: {s}\n", .{pCaptureDeviceInfos[index].name});
 
-    const encoder_config = ma.ma_encoder_config_init(ma.ma_encoding_format_wav, ma.ma_format_f32, 2, 44100);
-    var encoder: ma.ma_encoder = undefined;
-
-    try ma_error_check(ma.ma_encoder_init_file("output.wav", &encoder_config, &encoder));
-    defer ma.ma_encoder_uninit(&encoder);
-
     var device_config = ma.ma_device_config_init(ma.ma_device_type_capture);
     device_config.capture.pDeviceID = &pCaptureDeviceInfos[index].id;
-    device_config.capture.format = encoder.config.format;
-    device_config.capture.channels = encoder.config.channels;
-    device_config.sampleRate = encoder.config.sampleRate;
-    device_config.dataCallback = data_callback;
-    device_config.pUserData = &encoder;
+    device_config.capture.format = ma.ma_format_f32;
+    device_config.capture.channels = 2;
+    device_config.sampleRate = 44100;
+    device_config.dataCallback = capture_callback;
+    device_config.pUserData = null;
 
     var device: ma.ma_device = undefined;
     try ma_error_check(ma.ma_device_init(&context, &device_config, &device));
@@ -132,4 +128,35 @@ fn duplex(stdin_reader: *std.Io.Reader) !void {
     std.debug.print("Press enter to stop\n", .{});
     _ = stdin_reader.discardDelimiterInclusive('\n') catch unreachable;
     ma.ma_device_uninit(&device);
+}
+
+fn computePitch(samples: []const f32) f32 {
+    const MIN_FREQ = 50.0;
+    const MAX_FREQ = 1000.0;
+    const SAMPLE_RATE = 48000;
+
+    const min_lag: usize = @intFromFloat(SAMPLE_RATE / MAX_FREQ);
+    const max_lag: usize = @intFromFloat(SAMPLE_RATE / MIN_FREQ);
+
+    var best_lag: usize = 0;
+    var min_diff: f32 = std.math.inf(f32);
+
+    // Difference function (YIN simplified)
+    var lag = min_lag;
+    while (lag < max_lag and lag < samples.len) : (lag += 1) {
+        var diff: f32 = 0;
+        var i: usize = 0;
+        while (i < samples.len - lag) : (i += 1) {
+            const delta = samples[i] - samples[i + lag];
+            diff += delta * delta;
+        }
+
+        if (diff < min_diff) {
+            min_diff = diff;
+            best_lag = lag;
+        }
+    }
+
+    if (best_lag == 0) return 0;
+    return SAMPLE_RATE / @as(f32, @floatFromInt(best_lag));
 }
