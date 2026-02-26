@@ -25,6 +25,25 @@ pub fn main(init: std.process.Init) !void {
     var stdin_buffer: [1024]u8 = undefined;
     var stdin_reader = stdin.reader(io, &stdin_buffer);
 
+    while (true) {
+        std.debug.print("Choose: \n1: capture\n2: duplex\n", .{});
+        const index_str_input = try stdin_reader.interface.takeDelimiterInclusive('\n');
+        const index_str = std.mem.trim(u8, index_str_input, &std.ascii.whitespace);
+
+        if (index_str.len == 0) break;
+
+        const index = try std.fmt.parseInt(usize, index_str, 10);
+        std.debug.print("Selected: {}\n", .{index});
+
+        if (index == 1) {
+            try capture(&stdin_reader.interface);
+        } else if (index == 2) {
+            try duplex(&stdin_reader.interface);
+        }
+    }
+}
+
+fn capture(stdin_reader: *std.Io.Reader) !void {
     var context: ma.ma_context = undefined;
     try ma_error_check(ma.ma_context_init(null, 0, null, &context));
     defer _ = ma.ma_context_uninit(&context);
@@ -47,7 +66,7 @@ pub fn main(init: std.process.Init) !void {
     }
 
     std.debug.print("Insert index of capture device: ", .{});
-    const index_str_input = try stdin_reader.interface.takeDelimiterInclusive('\n');
+    const index_str_input = try stdin_reader.takeDelimiterInclusive('\n');
     const index_str = std.mem.trim(u8, index_str_input, &std.ascii.whitespace);
     const index = try std.fmt.parseInt(usize, index_str, 10);
     std.debug.print("Selected capture device: {s}\n", .{pCaptureDeviceInfos[index].name});
@@ -74,5 +93,43 @@ pub fn main(init: std.process.Init) !void {
 
     std.debug.print("Recording, press enter to stop\n", .{});
 
-    _ = try stdin_reader.interface.discardDelimiterInclusive('\n');
+    _ = try stdin_reader.discardDelimiterInclusive('\n');
+}
+
+fn captureTestCb(
+    pDevice: [*c]ma.ma_device,
+    pOutput: ?*anyopaque,
+    pInput: ?*const anyopaque,
+    frameCount: ma.ma_uint32,
+) callconv(.c) void {
+    const count = frameCount * pDevice.*.capture.channels;
+    const output: [*]f32 = @ptrCast(@alignCast(pOutput));
+    const input_m: [*]const f32 = @ptrCast(@alignCast(pInput));
+    const input = input_m[0..count];
+    @memcpy(output, input);
+}
+
+fn duplex(stdin_reader: *std.Io.Reader) !void {
+    var device_config = ma.ma_device_config_init(ma.ma_device_type_duplex);
+    device_config.capture.pDeviceID = null; //capture_id;
+    device_config.capture.format = ma.ma_format_f32;
+    device_config.capture.channels = 2;
+    device_config.capture.shareMode = ma.ma_share_mode_shared;
+    device_config.playback.pDeviceID = null; //playback_id;
+    device_config.playback.format = device_config.capture.format;
+    device_config.playback.channels = device_config.capture.channels;
+    device_config.playback.shareMode = ma.ma_share_mode_shared;
+    device_config.sampleRate = 48000;
+    device_config.dataCallback = captureTestCb;
+    // device_config.pUserData = power;
+    // device_config.noPreSilencedOutputBuffer = @intFromBool(true);
+
+    var device: ma.ma_device = undefined;
+
+    try ma_error_check(ma.ma_device_init(null, &device_config, &device));
+    try ma_error_check(ma.ma_device_start(&device));
+
+    std.debug.print("Press enter to stop\n", .{});
+    _ = stdin_reader.discardDelimiterInclusive('\n') catch unreachable;
+    ma.ma_device_uninit(&device);
 }
