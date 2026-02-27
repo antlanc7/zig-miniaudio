@@ -6,26 +6,12 @@ pub fn build(b: *std.Build) void {
 
     const miniaudio_dep = b.dependency("miniaudio", .{});
 
-    const miniaudio_mod = b.createModule(.{
-        .target = target,
-        .optimize = optimize,
-        .link_libc = true,
-    });
-    miniaudio_mod.addIncludePath(miniaudio_dep.path("."));
-    miniaudio_mod.addCSourceFile(.{ .file = miniaudio_dep.path("miniaudio.c") });
-
-    const miniaudio = b.addLibrary(.{
-        .name = "miniaudio",
-        .root_module = miniaudio_mod,
-    });
-    miniaudio.installHeader(miniaudio_dep.path("miniaudio.h"), "miniaudio.h");
-
     const exe_mod = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
-    exe_mod.linkLibrary(miniaudio);
+    exe_mod.linkLibrary(miniaudio_dep.artifact("miniaudio"));
 
     const exe = b.addExecutable(.{
         .name = "zig-miniaudio",

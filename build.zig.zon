@@ -5,8 +5,8 @@
     .minimum_zig_version = "0.16.0-dev.2653+784e89fd4",
     .dependencies = .{
         .miniaudio = .{
-            .url = "https://github.com/mackron/miniaudio/archive/refs/tags/0.11.24.tar.gz",
-            .hash = "N-V-__8AAKZFwACf17gBwzWswQ--hz9oK0axRpa0dHo8Efx0",
+            .url = "git+https://codeberg.org/antlanc7/miniaudio.git#1c757931735e5c6cdd449dacbada9f8229ef6ffa",
+            .hash = "miniaudio-0.11.24-LWmAGxUiAABkmhOHLaJRRsCAiaJbF0eo3pj222_-6BaP",
         },
     },
     .paths = .{
