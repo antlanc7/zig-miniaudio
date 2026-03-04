@@ -11,7 +11,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    exe_mod.linkLibrary(miniaudio_dep.artifact("miniaudio"));
+    exe_mod.addImport("miniaudio", miniaudio_dep.module("miniaudio"));
 
     const exe = b.addExecutable(.{
         .name = "zig-miniaudio",
