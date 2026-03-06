@@ -58,13 +58,23 @@ fn capture(stdin_reader: *std.Io.Reader) !void {
     try ma_error_check(ma.ma_context_get_devices(&context, &pPlaybackDeviceInfos, &playbackCount, &pCaptureDeviceInfos, &captureCount));
 
     for (0..playbackCount) |i| {
-        const info = &pPlaybackDeviceInfos[i];
-        std.debug.print("Playback Device {d}: {s}\n", .{ i, info.name });
+        var info: ma.ma_device_info = undefined;
+        try ma_error_check(ma.ma_context_get_device_info(&context, ma.ma_device_type_playback, &pPlaybackDeviceInfos[i].id, &info));
+        std.debug.print("Playback Device {d}: {s} {}\n", .{ i, info.name, info.nativeDataFormatCount });
+        for (0..info.nativeDataFormatCount) |j| {
+            const format = &info.nativeDataFormats[j];
+            std.debug.print("  Format {d}: {d} {d} {d}\n", .{ j, format.format, format.channels, format.sampleRate });
+        }
     }
 
     for (0..captureCount) |i| {
-        const info = &pCaptureDeviceInfos[i];
-        std.debug.print("Capture Device {d}: {s}\n", .{ i, info.name });
+        var info: ma.ma_device_info = undefined;
+        try ma_error_check(ma.ma_context_get_device_info(&context, ma.ma_device_type_playback, &pPlaybackDeviceInfos[i].id, &info));
+        std.debug.print("Capture Device {d}: {s} {}\n", .{ i, info.name, info.nativeDataFormatCount });
+        for (0..info.nativeDataFormatCount) |j| {
+            const format = &info.nativeDataFormats[j];
+            std.debug.print("  Format {d}: {d} {d} {d}\n", .{ j, format.format, format.channels, format.sampleRate });
+        }
     }
 
     std.debug.print("Insert index of capture device: ", .{});
