@@ -2,10 +2,10 @@
     .name = .zig_miniaudio,
     .version = "0.0.0",
     .fingerprint = 0x437121066afe1d60,
-    .minimum_zig_version = "0.16.0-dev.2653+784e89fd4",
+    .minimum_zig_version = "0.16.0-dev.2821+3edaef9e0",
     .dependencies = .{
         .miniaudio = .{
-            .url = "git+https://codeberg.org/antlanc7/miniaudio.git#21bc669859ef3f6aabd0a2de0931b80cff8837c5",
+            .url = "git+https://codeberg.org/allyourcodebase/miniaudio.git#21bc669859ef3f6aabd0a2de0931b80cff8837c5",
             .hash = "miniaudio-0.11.25-LWmAG1UgAAABQoUxopYnG2xp1un2FWnSfdKiTLX2ix-i",
         },
     },
